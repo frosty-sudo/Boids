@@ -2,6 +2,24 @@
 let boids
 let showSep = true, showAli = true, showCoh = true
 
+let backdrop 
+let bubbleSkins = []
+let fishSkin = []
+
+
+class RGB {
+  constructor(r, g, b) {
+    this.r = r
+    this.g = g
+    this.b = b
+  }
+
+
+  average() {
+    return (this.r + this.g + this.b)/3
+  }
+}
+
 
 class Vector {
   constructor(x, y) {
@@ -32,6 +50,54 @@ class Vector {
 }
 
 
+function mod(x, y) {
+  return x - y*floor(x/y)
+}
+
+class Trail {
+  constructor() {
+    this.length = 4
+    this.coords = []
+    this.index = 0
+
+  }
+
+  draw(x, y) {
+    if (frameCount % 2 == 0) {
+      if (this.coords.length < this.length) {
+        this.coords.push(new Vector(x, y))
+      } else {
+        if (this.index < this.length) {
+          this.coords[this.index] = new Vector(x+random(-2,2), y+random(-2,2))
+        } else {
+          this.index = 0
+          this.coords[this.index] = new Vector(x+random(-2,2), y+random(-2,2))
+          
+        }
+        this.index++
+      }
+    }
+
+    // fill(255)
+    // console.log(this.coords)
+    push()
+    imageMode(CENTER)
+    for (let i = 0; i < this.coords.length; i++) {
+      let index = mod(i+this.index-1, this.coords.length)
+      image(bubbleSkins[floor(i/1.5)], this.coords[index].x, this.coords[index].y, 10, 10)
+      this.coords[index].y--
+      // if (i == 0) {
+      //   fill(0, 255, 0)
+      // } else {
+      //   fill(255)
+      // }
+      // circle(this.coords[index].x, this.coords[index].y, 10)
+    }
+    pop()
+  }
+}
+
+
 class Boid {
   constructor(x, y) {
     this.x = x
@@ -39,7 +105,25 @@ class Boid {
     this.facing = new Vector(1,1)
     this.steeringSpeed = 0.0015
     this.viewRadius = 60
-    this.color = random()
+    this.trail = new Trail()
+
+
+
+    
+
+
+    this.skin = floor(random(0,fishSkin.length))
+
+    while(this.color == null || this.color.average() < 100) {
+      this.color = new RGB(random(0, 255), random(0, 255), random(0, 255))
+    }
+
+    let tmpGraphic = createGraphics(fishSkin[this.skin].width, fishSkin[this.skin].height)
+    tmpGraphic.tint(this.color.r, this.color.g, this.color.b)
+    tmpGraphic.image(fishSkin[this.skin], 0, 0)
+    this.tintedImg = tmpGraphic.get()
+    tmpGraphic.remove()
+
   }
 
 
@@ -161,7 +245,6 @@ class Boid {
     // }
     
     
-
     this.facing.normalize()
 
     let speedX = this.facing.x * deltaTime
@@ -195,16 +278,39 @@ class Boid {
     this.y -= speedY*speed
     noStroke()
     fill(0)
+    this.trail.draw(this.x, this.y)
+
     push()
     translate(this.x, this.y)
-    rotate(atan2(this.facing.y, this.facing.x)+HALF_PI)
-    triangle(0, 10, -5, -2, +5, -2)
+    rotate(atan2(this.facing.y, this.facing.x)+PI)
+    // triangle(0, 10, -5, -2, +5, -2)
+    imageMode(CENTER)
+    if (this.facing.x >= 0) {
+      scale(1, -1)
+      image(this.tintedImg, 0, 0)
+    } else {
+      image(this.tintedImg, 0, 0)
+    }
     stroke(0)
     strokeWeight(1)
     // line(0,0, 0, 100)
     pop()
 
   }
+}
+
+
+function preload() {
+  fishSkin.push(loadImage('Assets/Fish/fish1.png'))
+  fishSkin.push(loadImage('Assets/Fish/fish2.png'))
+  fishSkin.push(loadImage('Assets/Fish/fish3.png'))
+  fishSkin.push(loadImage('Assets/Fish/fish4.png'))
+  // fishSkin.push(loadImage('Assets/Fish/fish5.png'))
+  fishSkin.push(loadImage('Assets/Fish/fish6.png'))
+  backdrop = loadImage('Assets/Backdrop/tank.png')
+  bubbleSkins.push(loadImage('Assets/Bubbles/bubble1.png'))
+  bubbleSkins.push(loadImage('Assets/Bubbles/bubble2.png'))
+  bubbleSkins.push(loadImage('Assets/Bubbles/bubble3.png'))
 }
 
 
@@ -225,6 +331,9 @@ function draw() {
     deltaTime = 0
   }
   background(220);
+  tint(190,190,255)
+  image(backdrop, 0, 0)
+  
 
   for (let i = 0; i < boids.length; i++) {
     boids[i].draw()
