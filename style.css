@@ -1,0 +1,71 @@
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+canvas {
+  display: block;
+}
+
+.inputRange1::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border: 2px solid #333333;
+  border-radius: 9999px;
+  background: #2bb6e4;
+  box-shadow: none;
+}
+
+.inputRange1 {
+  appearance: none;
+  width: 200px;
+  height: 12px;
+  border: 1px solid #333333;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #568096 40%, #999999 40%);
+  cursor: pointer;
+}
+
+.inputRange2::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border: 2px solid #333333;
+  border-radius: 9999px;
+  background: #2bb6e4;
+  box-shadow: none;
+}
+
+.inputRange2 {
+  appearance: none;
+  width: 200px;
+  height: 12px;
+  border: 1px solid #333333;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #568096 5%, #999999 5%);
+  cursor: pointer;
+}
+
+.inputRange3::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border: 2px solid #333333;
+  border-radius: 9999px;
+  background: #2bb6e4;
+  box-shadow: none;
+}
+
+.inputRange3 {
+  appearance: none;
+  width: 200px;
+  height: 12px;
+  border: 1px solid #333333;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #568096 50%, #999999 50%);
+  cursor: pointer;
+}
