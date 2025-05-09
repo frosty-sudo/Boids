@@ -18,6 +18,17 @@ class RGB {
   average() {
     return (this.r + this.g + this.b)/3
   }
+
+
+  variation(color) {
+
+
+    if (this.r > this.b) {
+      return (this.r - color.r)/this.r
+    } else {
+      return (this.b - color.b)/this.b
+    }
+  }
 }
 
 
@@ -62,36 +73,41 @@ class Trail {
 
   }
 
-  draw(x, y) {
-    if (frameCount % 2 == 0) {
+  drawTrail(x, y) {
+    if (frameCount % floor(Math.random()*5+5) == 0) {
       if (this.coords.length < this.length) {
         this.coords.push(new Vector(x, y))
       } else {
         if (this.index < this.length) {
-          this.coords[this.index] = new Vector(x+random(-2,2), y+random(-2,2))
+          this.coords[this.index].x = x+random(-2,2)
+          this.coords[this.index].y = y+random(-2,2)
         } else {
           this.index = 0
-          this.coords[this.index] = new Vector(x+random(-2,2), y+random(-2,2))
+          this.coords[this.index].x = x+random(-2,2)
+          this.coords[this.index].y = y+random(-2,2)
           
         }
         this.index++
       }
     }
 
-    // fill(255)
+    fill(255)
     // console.log(this.coords)
     push()
     imageMode(CENTER)
+    noFill()
+    stroke(255)
+    strokeWeight(1)
     for (let i = 0; i < this.coords.length; i++) {
-      let index = mod(i+this.index-1, this.coords.length)
-      image(bubbleSkins[floor(i/1.5)], this.coords[index].x, this.coords[index].y, 10, 10)
+      let index = mod(i+this.index, this.coords.length)
+      // image(bubbleSkins[floor(i/1.5)], this.coords[index].x, this.coords[index].y, 10, 10)
       this.coords[index].y--
       // if (i == 0) {
       //   fill(0, 255, 0)
       // } else {
       //   fill(255)
       // }
-      // circle(this.coords[index].x, this.coords[index].y, 10)
+      circle(this.coords[index].x, this.coords[index].y, (floor(i/1.5))*2)
     }
     pop()
   }
@@ -102,30 +118,32 @@ class Boid {
   constructor(x, y) {
     this.x = x
     this.y = y
-    this.facing = new Vector(1,1)
+    this.facing = new Vector(random(-1, 1), random(-1, 1))
     this.steeringSpeed = 0.0015
     this.viewRadius = 60
     this.trail = new Trail()
 
 
 
-    
+    this.generateColor()
 
 
-    this.skin = floor(random(0,fishSkin.length))
+    let skin = floor(random(0,fishSkin.length))
 
-    while(this.color == null || this.color.average() < 100) {
-      this.color = new RGB(random(0, 255), random(0, 255), random(0, 255))
-    }
 
-    let tmpGraphic = createGraphics(fishSkin[this.skin].width, fishSkin[this.skin].height)
+    let tmpGraphic = createGraphics(fishSkin[skin].width, fishSkin[skin].height)
     tmpGraphic.tint(this.color.r, this.color.g, this.color.b)
-    tmpGraphic.image(fishSkin[this.skin], 0, 0)
+    tmpGraphic.image(fishSkin[skin], 0, 0)
     this.tintedImg = tmpGraphic.get()
     tmpGraphic.remove()
 
   }
 
+  generateColor() {
+    while(this.color == null || this.color.average() < 100) {
+      this.color = new RGB(random(0, 255), random(0, 255), random(0, 255))
+    }
+  }
 
   seperation() {
     let seperationBoost = document.getElementById("inputRange1").value
@@ -142,13 +160,13 @@ class Boid {
         // line(this.x, this.y, opBoid.x, opBoid.y)
 
         let direction = this.facing.dot({
-          x:(this.y - opBoid.y)-this.facing.y,
-          y:-(this.x - opBoid.x)-this.facing.x 
+          x:(this.x - opBoid.x)-this.facing.x,
+          y:-(this.y - opBoid.y)-this.facing.y 
         })
 
         this.facing.normalize()
 
-        let seperationDistanceForce = (this.viewRadius - ds) * 0.2
+        let seperationDistanceForce = (this.viewRadius - ds) * 0.2 * this.color.variation(opBoid.color) < 0.2 ? 1 : 2
 
         if (abs(direction) != direction) {
           let xRotated = this.facing.x * cos(this.steeringSpeed*seperationBoost*seperationDistanceForce) - this.facing.y * sin(this.steeringSpeed*seperationBoost*seperationDistanceForce)
@@ -176,7 +194,7 @@ class Boid {
       let opBoid = boids[i]
       let ds = distance(this, opBoid)
 
-      if (ds != 0 && ds < this.viewRadius) {
+      if (ds != 0 && ds < this.viewRadius && this.color.variation(opBoid.color) < 0.2) {
         this.facing.x += opBoid.facing.x * this.steeringSpeed * alignmentBoost
         this.facing.y += opBoid.facing.y * this.steeringSpeed * alignmentBoost
       }
@@ -184,7 +202,7 @@ class Boid {
   }
 
   cohesion() {
-    let cohesionBoost = document.getElementById("inputRange3").value
+    let cohesionBoost = document.getElementById("inputRange3").value * 2
     let avgX = 0
     let avgY = 0
     let amount = 0
@@ -193,7 +211,7 @@ class Boid {
       let ds = distance(this, opBoid)
 
 
-      if (/* ds != 0 &&  */ds < this.viewRadius) {
+      if (/* ds != 0 &&  */ds < this.viewRadius && this.color.variation(opBoid.color) < 0.2) {
         avgX += opBoid.x
         avgY += opBoid.y
         amount++
@@ -217,7 +235,7 @@ class Boid {
     if (avgX == this.x && avgY == this.y) {
       return
     }
-    if (abs(direction) != direction) {
+    if (abs(direction) == direction) {
       let xRotated = this.facing.x * cos(-this.steeringSpeed * cohesionBoost) - this.facing.y * sin(-this.steeringSpeed * cohesionBoost)
       let yRotated = this.facing.x * sin(-this.steeringSpeed * cohesionBoost) + this.facing.y * cos(-this.steeringSpeed * cohesionBoost)
 
@@ -237,12 +255,110 @@ class Boid {
   }
 
 
-  draw() {
-    // if (mouseIsPressed) {
+  borderRepellant() {
+    let repellantForceMultiplier = 1
 
-    //   this.facing.x = this.x - mouseX
-    //   this.facing.y = this.y - mouseY
-    // }
+    if (this.facing.x + this.x > width - 300) {
+      let borderDistanceForce = (300-(width - (this.facing.x + this.x))) * repellantForceMultiplier
+      if (this.facing.y < 0) {
+
+        let xRotated = this.facing.x * cos(-this.steeringSpeed * borderDistanceForce) - this.facing.y * sin(-this.steeringSpeed * borderDistanceForce)
+        let yRotated = this.facing.x * sin(-this.steeringSpeed * borderDistanceForce) + this.facing.y * cos(-this.steeringSpeed * borderDistanceForce)
+  
+        // line(this.x, this.y, xRotated * -20 + this.x, yRotated * -20 + this.y)
+        this.facing.x += xRotated
+        this.facing.y += yRotated  
+      } else {
+
+        let xRotated = this.facing.x * cos(this.steeringSpeed * borderDistanceForce) - this.facing.y * sin(this.steeringSpeed * borderDistanceForce)
+        let yRotated = this.facing.x * sin(this.steeringSpeed * borderDistanceForce) + this.facing.y * cos(this.steeringSpeed * borderDistanceForce)
+  
+        // line(this.x, this.y, xRotated * -20 + this.x, yRotated * -20 + this.y)
+        this.facing.x += xRotated
+        this.facing.y += yRotated  
+
+      }
+    }
+
+
+    if (this.facing.x + this.x < 300) {
+      let borderDistanceForce = (300-((this.facing.x + this.x))) * repellantForceMultiplier
+      if (this.facing.y > 0) {
+
+        let xRotated = this.facing.x * cos(-this.steeringSpeed * borderDistanceForce) - this.facing.y * sin(-this.steeringSpeed * borderDistanceForce)
+        let yRotated = this.facing.x * sin(-this.steeringSpeed * borderDistanceForce) + this.facing.y * cos(-this.steeringSpeed * borderDistanceForce)
+  
+        // line(this.x, this.y, xRotated * -20 + this.x, yRotated * -20 + this.y)
+        this.facing.x += xRotated
+        this.facing.y += yRotated  
+      } else {
+
+        let xRotated = this.facing.x * cos(this.steeringSpeed * borderDistanceForce) - this.facing.y * sin(this.steeringSpeed * borderDistanceForce)
+        let yRotated = this.facing.x * sin(this.steeringSpeed * borderDistanceForce) + this.facing.y * cos(this.steeringSpeed * borderDistanceForce)
+  
+        // line(this.x, this.y, xRotated * -20 + this.x, yRotated * -20 + this.y)
+        this.facing.x += xRotated
+        this.facing.y += yRotated  
+
+      }
+    }
+
+
+    if (this.facing.y + this.y > height - 200) {
+      let borderDistanceForce = (200-(height - (this.facing.y + this.y))) * repellantForceMultiplier
+      if (this.facing.x > 0) {
+
+        let xRotated = this.facing.x * cos(-this.steeringSpeed * borderDistanceForce) - this.facing.y * sin(-this.steeringSpeed * borderDistanceForce)
+        let yRotated = this.facing.x * sin(-this.steeringSpeed * borderDistanceForce) + this.facing.y * cos(-this.steeringSpeed * borderDistanceForce)
+  
+        // line(this.x, this.y, xRotated * -20 + this.x, yRotated * -20 + this.y)
+        this.facing.x += xRotated
+        this.facing.y += yRotated  
+      } else {
+
+        let xRotated = this.facing.x * cos(this.steeringSpeed * borderDistanceForce) - this.facing.y * sin(this.steeringSpeed * borderDistanceForce)
+        let yRotated = this.facing.x * sin(this.steeringSpeed * borderDistanceForce) + this.facing.y * cos(this.steeringSpeed * borderDistanceForce)
+  
+        // line(this.x, this.y, xRotated * -20 + this.x, yRotated * -20 + this.y)
+        this.facing.x += xRotated
+        this.facing.y += yRotated  
+
+      }
+    }
+
+
+    if (this.facing.y + this.y < 200) {
+      let borderDistanceForce = (200-((this.facing.y + this.y))) * repellantForceMultiplier
+      if (this.facing.x < 0) {
+
+        let xRotated = this.facing.x * cos(-this.steeringSpeed * borderDistanceForce) - this.facing.y * sin(-this.steeringSpeed * borderDistanceForce)
+        let yRotated = this.facing.x * sin(-this.steeringSpeed * borderDistanceForce) + this.facing.y * cos(-this.steeringSpeed * borderDistanceForce)
+  
+        // line(this.x, this.y, xRotated * -20 + this.x, yRotated * -20 + this.y)
+        // console.log(xRotated, yRotated)
+        this.facing.x += xRotated
+        this.facing.y += yRotated  
+      } else {
+
+        let xRotated = this.facing.x * cos(this.steeringSpeed * borderDistanceForce) - this.facing.y * sin(this.steeringSpeed * borderDistanceForce)
+        let yRotated = this.facing.x * sin(this.steeringSpeed * borderDistanceForce) + this.facing.y * cos(this.steeringSpeed * borderDistanceForce)
+  
+        // line(this.x, this.y, xRotated * -20 + this.x, yRotated * -20 + this.y)
+        // console.log(xRotated, yRotated)
+        this.facing.x += xRotated
+        this.facing.y += yRotated  
+
+      }
+    }
+  }
+
+
+  drawBoids() {
+    if (mouseIsPressed && keyIsDown(71)) {
+
+      this.facing.x = mouseX - this.x
+      this.facing.y = mouseY - this.y
+    }
     
     
     this.facing.normalize()
@@ -252,40 +368,43 @@ class Boid {
 
     let speed = 0.2
 
-    if (this.x < 0 && abs(this.facing.x) == this.facing.x) {
-      // this.x = 0
-      // this.facing.x *= -1
-      this.x = width
-      // this.y = height - this.y
-    }
-    if (this.y < 0 && abs(this.facing.y) == this.facing.y) {
-      // this.y = 0
-      // this.facing.y *= -1
-      this.y = height
-    }
-    if (this.x > width && abs(this.facing.x) != this.facing.x) {
-      // this.x = width
-      // this.facing.x *= -1
-      this.x = 0
-    }
-    if (this.y > height && abs(this.facing.y) != this.facing.y) {
-      // this.y = height
-      // this.facing.y *= -1
-      this.y = 0
-    }
+    // if (this.x < 0 && abs(this.facing.x) == this.facing.x) {
+    //   // this.x = 0
+    //   // this.facing.x *= -1
+    //   this.x = width
+    //   // this.y = height - this.y
+    // }
+    // if (this.y < 0 && abs(this.facing.y) == this.facing.y) {
+    //   // this.y = 0
+    //   // this.facing.y *= -1
+    //   this.y = height
+    // }
+    // if (this.x > width && abs(this.facing.x) != this.facing.x) {
+    //   // this.x = width
+    //   // this.facing.x *= -1
+    //   this.x = 0
+    // }
+    // if (this.y > height && abs(this.facing.y) != this.facing.y) {
+    //   // this.y = height
+    //   // this.facing.y *= -1
+    //   this.y = 0
+    // }
 
-    this.x -= speedX*speed
-    this.y -= speedY*speed
+    this.x += speedX*speed
+    this.y += speedY*speed
     noStroke()
     fill(0)
-    this.trail.draw(this.x, this.y)
+    this.trail.drawTrail(this.x, this.y)
+    stroke(255)
+    // line(this.x, this.y, this.x +this.facing.x*100, this.y + this.facing.y*100)
 
     push()
     translate(this.x, this.y)
-    rotate(atan2(this.facing.y, this.facing.x)+PI)
+    rotate(atan2(this.facing.y, this.facing.x))
+    fill(0)
     // triangle(0, 10, -5, -2, +5, -2)
     imageMode(CENTER)
-    if (this.facing.x >= 0) {
+    if (this.facing.x <= 0) {
       scale(1, -1)
       image(this.tintedImg, 0, 0)
     } else {
@@ -299,6 +418,30 @@ class Boid {
   }
 }
 
+class redBoid extends Boid {
+  constructor(x, y) {
+    super(x, y)
+  }
+
+  generateColor() {
+    while(this.color == null || this.color.average() < 100) {
+      this.color = new RGB(random(100, 255), random(0, 255), random(0, 100))
+    }
+  }
+}
+
+
+class blueBoid extends Boid {
+  constructor(x, y) {
+    super(x, y)
+  }
+
+  generateColor() {
+    while(this.color == null || this.color.average() < 100) {
+      this.color = new RGB(random(0, 100), random(0, 255), random(100, 255))
+    }
+  }
+}
 
 function preload() {
   fishSkin.push(loadImage('Assets/Fish/fish1.png'))
@@ -319,8 +462,9 @@ function setup() {
   can.style("position", "relative")
   boids = []
 
-  for (let i = 0; i < 100; i++) {
-    boids.push(new Boid(i*10+ 110, 100))
+  for (let i = 0; i < 50; i++) {
+    boids.push(new redBoid(i*10+ 110, 100))
+    boids.push(new blueBoid(i*10+ 110, 120))
     // boids.push(new Boid(i*10+ 130, 100))
     // boids.push(new Boid(i*10+ 115, 115))
   }
@@ -331,13 +475,10 @@ function draw() {
     deltaTime = 0
   }
   background(220);
-  tint(190,190,255)
+  // tint(190,190,255)
   image(backdrop, 0, 0)
   
 
-  for (let i = 0; i < boids.length; i++) {
-    boids[i].draw()
-  }
 
   if (showSep) {
     for (let i = 0; i < boids.length; i++) {
@@ -357,6 +498,22 @@ function draw() {
     }
   }
 
+  for (let i = 0; i < boids.length; i++) {
+    boids[i].borderRepellant()
+  }
+
+
+  for (let i = 0; i < boids.length; i++) {
+    boids[i].drawBoids()
+  }
+
+  fill(255)
+  stroke(0)
+  strokeWeight(2)
+  rect(5,5,160,98,10,10,10,10)
+
+
+  fill(0)
   textAlign(LEFT)
   textSize(20)
   noStroke()
